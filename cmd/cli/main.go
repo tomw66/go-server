@@ -1,8 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"log"
-	"net/http"
+	"os"
 
 	poker "github.com/tomw66/go-server"
 )
@@ -17,7 +18,7 @@ func main() {
 	}
 	defer close()
 
-	server := poker.NewPlayerServer(store)
-
-	log.Fatal(http.ListenAndServe(":5000", server))
+	fmt.Println("Let's play poker")
+	fmt.Println("Type {Name} wins to record a win")
+	poker.NewCLI(store, os.Stdin).PlayPoker()
 }
