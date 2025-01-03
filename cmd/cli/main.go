@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-
-	poker "github.com/tomw66/go-server"
+	"poker"
 )
 
 const dbFileName = "game.db.json"
@@ -21,5 +20,8 @@ func main() {
 
 	fmt.Println("Let's play poker")
 	fmt.Println("Type {Name} wins to record a win")
-	poker.NewCLI(store, os.Stdin).PlayPoker()
+
+	game := poker.NewTexasHoldem(poker.BlindAlerterFunc(poker.StdOutAlerter), store)
+	cli := poker.NewCLI(os.Stdin, os.Stdout, game)
+	cli.PlayPoker()
 }
