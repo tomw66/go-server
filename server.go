@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
-	"io"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -30,6 +30,10 @@ type PlayerStore interface {
 	GetLeague() League
 }
 
+type playerServerWS struct {
+	*websocket.Conn
+}
+
 const jsonContentType = "application/json"
 
 const htmlTemplatePath = "game.html"
@@ -39,7 +43,34 @@ var wsUpgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
-func NewPlayerServer(store PlayerStore, game Game) (*PlayerServer, error) {
+func newPlayerServerWS(w http.ResponseWriter, r *http.Request) *playerServerWS {
+	conn, err := wsUpgrader.Upgrade(w, r, nil)
+
+	if err != nil {
+		log.Printf("problem upgrading connection to WebSockets %v\n", err)
+	}
+
+	return &playerServerWS{conn}
+}
+
+func (w *playerServerWS) WaitForMsg() string {
+	_, msg, err := w.ReadMessage()
+	if err != nil {
+		log.Printf("error reading from websocket %v\n", err)
+	}
+	return string(msg)
+}
+
+func (w *playerServerWS) Write(p []byte) (n int, err error) {
+	err = w.WriteMessage(websocket.TextMessage, p)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return len(p), nil
+}
+func newPlayerServer(store PlayerStore, game Game) (*PlayerServer, error) {
 	p := new(PlayerServer)
 
 	tmpl, err := template.ParseFiles(htmlTemplatePath)
@@ -84,14 +115,14 @@ func (p *PlayerServer) playGame(w http.ResponseWriter, r *http.Request) {
 }
 
 func (p *PlayerServer) webSocket(w http.ResponseWriter, r *http.Request) {
-	conn, _ := wsUpgrader.Upgrade(w, r, nil)
+	ws := newPlayerServerWS(w, r)
 
-	_, numberOfPlayersMsg, _ := conn.ReadMessage()
-	numberOfPlayers, _ := strconv.Atoi(string(numberOfPlayersMsg))
-	p.game.Start(numberOfPlayers, io.Discard) //todo: Don't discard the blinds messages!
+	numberOfPlayersMsg := ws.WaitForMsg()
+	numberOfPlayers, _ := strconv.Atoi(numberOfPlayersMsg)
+	p.game.Start(numberOfPlayers, ws)
 
-	_, winner, _ := conn.ReadMessage()
-	p.game.Finish(string(winner))
+	winner := ws.WaitForMsg()
+	p.game.Finish(winner)
 }
 
 func (p *PlayerServer) showScore(w http.ResponseWriter, player string) {
