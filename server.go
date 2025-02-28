@@ -70,7 +70,7 @@ func (w *playerServerWS) Write(p []byte) (n int, err error) {
 
 	return len(p), nil
 }
-func newPlayerServer(store PlayerStore, game Game) (*PlayerServer, error) {
+func NewPlayerServer(store PlayerStore, game Game) (*PlayerServer, error) {
 	p := new(PlayerServer)
 
 	tmpl, err := template.ParseFiles(htmlTemplatePath)

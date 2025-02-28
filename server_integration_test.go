@@ -8,13 +8,13 @@ import (
 )
 
 func TestRecordingWinsAndRetrievingThem(t *testing.T) {
-	database, cleanDatabase := poker.createTempFile(t, "[]")
+	database, cleanDatabase := createTempFile(t, "[]")
 	defer cleanDatabase()
 	store, err :=  poker.NewFileSystemPlayerStore(database)
 
 	assertNoError(t, err)
 
-	server := mustMakePlayerServer(t, store)
+	server := mustMakePlayerServer(t, store, dummyGame)
 	player := "Pepper"
 
 	server.ServeHTTP(httptest.NewRecorder(), newPostWinRequest(player))
